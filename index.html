@@ -567,7 +567,7 @@ const ALL_MACHINES = Object.keys(VELOCIDADES_POR_MAQUINA);
 function velTableFor(machine) { return VELOCIDADES_POR_MAQUINA[machine] || {}; }
 function velCountFor(machine) { return Object.keys(velTableFor(machine)).length; }
 
-const STORAGE_KEY = 'trProdutividadeDashboard_v2'; // Chave atualizada para o novo sistema
+const STORAGE_KEY = 'trProdutividadeDashboard_v2'; 
 
 /* ---------------------------------------------------------------
    Helpers
@@ -1464,6 +1464,7 @@ document.getElementById('btnClearChartFilter').addEventListener('click', () => {
    Interatividade de Filtros & Processamento Automático
 --------------------------------------------------------------- */
 let producaoData = null, interrupcoesData = null;
+let ultimaSincronizacao = 'Desconhecida';
 
 function statusMsg(text, isError) {
   const el = document.getElementById('statusMsg');
@@ -1504,7 +1505,6 @@ function updateMachineTag() {
   }
 }
 
-// Ação centralizada para recalcular tudo sempre que o utilizador muda o filtro
 function processarPainel() {
   try {
     const machine = document.getElementById('machineSelect').value;
@@ -1513,7 +1513,6 @@ function processarPainel() {
     
     statusMsg('Processando cálculos industriais...');
     
-    // Defer para permitir que o navegador atualize a mensagem de status antes de travar processando
     setTimeout(() => {
       try {
         const result = machine === 'TODAS' 
@@ -1521,7 +1520,7 @@ function processarPainel() {
           : computeDashboard(producaoData, interrupcoesData, machine, turnoIni, turnoFim);
           
         renderAll(result);
-        statusMsg('Painel atualizado em tempo real. (' + result.days.length + ' dias identificados)');
+        statusMsg('Última sincronização da base: ' + ultimaSincronizacao + ' (' + result.days.length + ' dias analisados)');
         
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ machine, turnoIni, turnoFim }));
@@ -1535,7 +1534,6 @@ function processarPainel() {
   }
 }
 
-// Escutadores automáticos: quando se muda a dropdown ou a hora, processa na hora!
 document.getElementById('machineSelect').addEventListener('change', () => {
   updateMachineTag();
   if (producaoData && interrupcoesData) processarPainel();
@@ -1547,7 +1545,6 @@ document.getElementById('turnoFim').addEventListener('change', () => {
   if (producaoData && interrupcoesData) processarPainel();
 });
 
-// Eventos de Tabelas
 document.getElementById('searchInput').addEventListener('input', (e) => renderTable(currentDays, e.target.value.trim()));
 document.getElementById('showAllDays').addEventListener('change', () => renderTable(currentDays, document.getElementById('searchInput').value.trim()));
 document.getElementById('searchInputInterrupcoes').addEventListener('input', (e) => renderDetalhamentoTable(currentDetalhamento, e.target.value.trim()));
@@ -1590,9 +1587,19 @@ async function carregarBasesAutomaticamente() {
   try {
     statusMsg('A transferir bases de dados remotas...');
     
-    // cache: 'no-store' força o browser a ir buscar sempre os dados novos, ignorando a memória cache.
     const resProd = await fetch(URL_PRODUCAO, { cache: 'no-store' });
     if (!resProd.ok) throw new Error('Ficheiro Base_Producao.xlsx não encontrado.');
+    
+    const lastMod = resProd.headers.get('Last-Modified');
+    if (lastMod) {
+      const d = new Date(lastMod);
+      const dia = String(d.getDate()).padStart(2, '0');
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const hora = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      ultimaSincronizacao = `${dia}/${mes}/${d.getFullYear()} às ${hora}:${min}`;
+    }
+
     const arrayBufferProd = await resProd.arrayBuffer();
     const wbProd = XLSX.read(arrayBufferProd, { type: 'array', cellDates: true });
     producaoData = parseProducao(wbProd);
@@ -1618,7 +1625,6 @@ async function carregarBasesAutomaticamente() {
   }
 }
 
-// Inicia automaticamente
 window.addEventListener('DOMContentLoaded', carregarBasesAutomaticamente);
 </script>
 </body>
