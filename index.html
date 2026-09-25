@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Produtividade — Linha Transversal</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-2: #f0f3f7;
+    --border: #d9e1ea;
+    --text-primary: #1f3a70;
+    --text-secondary: #4a5f7f;
+    --text-muted: #8a96ab;
+    --steel: #1f3a70;
+    --steel-dark: #152952;
+    --accent: #00aacc;
+    --accent-light: #e0f4f9;
+    --amber: #f0a500;
+    --amber-bg: #fff5e0;
+    --red: #d64545;
+    --red-bg: #fde8e8;
+    --green: #2d9d78;
+    --green-bg: #e8f5f0;
+    --radius: 4px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1419;
+      --surface: #1a202e;
+      --surface-2: #242f42;
+      --border: #3a4455;
+      --text-primary: #e8eff9;
+      --text-secondary: #a8b5c9;
+      --text-muted: #7a8699;
+      --accent-light: #0d3d4d;
+      --amber-bg: #332b1a;
+      --red-bg: #3a1f1f;
+      --green-bg: #1a3029;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1419;
+    --surface: #1a202e;
+    --surface-2: #242f42;
+    --border: #3a4455;
+    --text-primary: #e8eff9;
+    --text-secondary: #a8b5c9;
+    --text-muted: #7a8699;
+    --accent-light: #0d3d4d;
+    --amber-bg: #332b1a;
+    --red-bg: #3a1f1f;
+    --green-bg: #1a3029;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header.top h1 {
+    font-size: 21px;
+    font-weight: 650;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+  }
+  header.top p { margin: 0; color: var(--text-secondary); font-size: 13px; max-width: 60ch; }
+  .machine-tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  section { margin-bottom: 28px; }
+  h2.section-title {
+    font-size: 13px;
+    font-weight: 650;
+    text-transform: none;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  /* Config / upload panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .config-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+  }
+  .field input[type=time], .field select {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+  }
+
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  button.secondary:hover:not(:disabled) {
+    background: var(--accent-light);
+  }
+  .status-msg { font-size: 12.5px; color: var(--text-secondary); }
+
+  /* Warnings */
+  #warnings { display: none; }
+  #warnings.show { display: block; }
+  .warning-box {
+    background: var(--amber-bg);
+    border: 1px solid var(--amber);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .warning-box b { color: var(--amber); }
+
+  /* KPIs */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    transition: all 0.2s ease;
+  }
+  .kpi:hover { 
+    border-left-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(31, 58, 112, 0.08);
+  }
+  .kpi.loss { border-left-color: var(--red); }
+  .kpi.ceiling { border-left-color: var(--text-muted); }
+  .kpi.eff { border-left-color: var(--green); }
+  .kpi .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .kpi .kpi-value { font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+  .kpi .kpi-unit { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+  .kpi .kpi-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Charts */
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; align-items: stretch; }
+  @media (max-width: 860px) { .chart-grid { grid-template-columns: 1fr; } }
+  canvas { max-width: 100%; }
+  .chart-canvas-wrap { position: relative; flex: 1; min-height: 200px; }
+  .chart-canvas-wrap canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+
+  /* Table */
+  .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;}
+  .table-controls input[type=text] {
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    min-width: 220px;
+  }
+  .toggle-label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;}
+  thead th {
+    text-align: right;
+    padding: 9px 10px;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  thead th:first-child, thead th:nth-child(2) { text-align: left; }
+  thead th:hover { color: var(--text-primary); }
+  tbody td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); font-family: var(--mono); white-space: nowrap; }
+  tbody td:first-child, tbody td:nth-child(2) { text-align: left; font-family: var(--sans); }
+  #materiaisTable tbody td { white-space: normal; line-height: 1.6; }
+  #materiaisTable tbody td:nth-child(3), #materiaisTable tbody td:nth-child(4) { text-align: right; font-family: var(--mono); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  .eff-good { color: var(--green); font-weight: 600; }
+  .eff-mid { color: var(--amber); font-weight: 600; }
+  .eff-bad { color: var(--red); font-weight: 600; }
+  .cov-flag { font-size: 10.5px; color: var(--amber); font-family: var(--sans); margin-left: 4px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .empty-state .big { font-size: 15px; color: var(--text-secondary); margin-bottom: 6px; }
+
+  footer.note {
+    margin-top: 30px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Painel de Produtividade — Linha Transversal</h1>
+      <p>Real produzido, produção esperada, perdas por interrupção e capacidade teórica, calculados a partir da velocidade técnica de cada material.</p>
+    </div>
+    <div class="machine-tag" id="machineTag">Aguardando dados...</div>
+  </header>
+
+  <section class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
+      <div class="config-row">
+        <div class="field">
+          <label for="turnoInicio">Início do turno</label>
+          <input type="time" id="turnoInicio" value="07:00">
+        </div>
+        <div class="field">
+          <label for="turnoFim">Fim do turno</label>
+          <input type="time" id="turnoFim" value="17:00">
+        </div>
+        <div class="field">
+          <label for="machineSelect">Máquina analisada</label>
+          <select id="machineSelect">
+            <option>A carregar...</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 6px;">
+        <span class="status-msg" id="statusMsg">Inicializando sistema...</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="warnings"></section>
+
+  <section id="resultsSection" style="display:none;">
+    
+    <section>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 12px 0; padding-bottom:8px; border-bottom:2px solid var(--accent); gap:10px; flex-wrap:wrap;">
+        <h2 class="section-title" style="margin:0; padding:0; border:none;">Indicadores do período carregado</h2>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <label for="kpiDayFilter" style="font-size:12px; color:var(--text-secondary);">Dia (KPIs):</label>
+          <select id="kpiDayFilter" style="font-family:var(--mono); font-size:12px; padding:5px 7px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text-primary); min-width: 120px;">
+            <option value="__all__">Todos os dias do período</option>
+          </select>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Real produzido</div>
+          <div class="kpi-value" id="kpiReal">—</div>
+          <div class="kpi-sub">soma dos lançamentos de produção</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Esperado no tempo útil</div>
+          <div class="kpi-value" id="kpiEsperado">—</div>
+          <div class="kpi-sub">velocidade técnica × tempo produtivo</div>
+        </div>
+        <div class="kpi loss">
+          <div class="kpi-label">Perdido em paradas</div>
+          <div class="kpi-value" id="kpiPerdido">—</div>
+          <div class="kpi-sub">velocidade técnica × tempo parado</div>
+        </div>
+        <div class="kpi ceiling">
+          <div class="kpi-label">Capacidade teórica do turno</div>
+          <div class="kpi-value" id="kpiPerfeito">—</div>
+          <div class="kpi-sub">velocidade técnica × turno cheio, sem paradas</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Evolução diária, principais causas e agentes causadores de parada</h2>
+      <div class="chart-grid">
+        <div class="chart-panel">
+          <div class="chart-canvas-wrap"><canvas id="dailyChart"></canvas></div>
+          <div id="clearFilterWrap" style="display:none; text-align:right; margin-top:12px;">
+            <button id="btnClearChartFilter" class="secondary" style="padding: 5px 10px; font-size: 11.5px;">Restaurar para "Todos os dias"</button>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+            <label for="causesDayFilter" style="font-size:12px; color:var(--text-secondary);">Dia (causas e agentes):</label>
+            <select id="causesDayFilter" style="font-family:var(--mono); font-size:12px; padding:5px 7px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text-primary); flex:1; min-width:120px;">
+              <option value="__all__">Todos os dias do período</option>
+            </select>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="causesChart"></canvas></div>
+          <div style="border-top:1px solid var(--border); margin:16px 0;"></div>
+          <div class="chart-canvas-wrap"><canvas id="agentesChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Detalhamento por dia</h2>
+      <div class="table-controls">
+        <input type="text" id="searchInput" placeholder="Buscar por data...">
+        <label class="toggle-label"><input type="checkbox" id="showAllDays"> mostrar dias sem operação</label>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th data-key="data">Data</th>
+              <th data-key="cobertura">Cobertura vel.</th>
+              <th data-key="parado">Parado</th>
+              <th data-key="produtivo">Produtivo</th>
+              <th data-key="velmedia">Vel. técnica média</th>
+              <th data-key="real">Real</th>
+              <th data-key="esperado">Esperado</th>
+              <th data-key="perdido">Perdido</th>
+              <th data-key="perfeito">Capacidade</th>
+              <th data-key="eficiencia">Eficiência</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+    
+    <section>
+      <h2 class="section-title">Detalhamento das interrupções</h2>
+      <div class="table-controls">
+        <input type="text" id="searchInputInterrupcoes" placeholder="Buscar por sintoma ou agente...">
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="interrupcoesTable">
+          <thead>
+            <tr>
+              <th style="text-align:left;" data-key="causa">Sintoma da interrupção</th>
+              <th style="text-align:left;" data-key="agente">Agente causador</th>
+              <th data-key="ocorrencias">Ocorrências</th>
+              <th data-key="tempoAcumulado">Tempo acumulado</th>
+              <th data-key="tempoMedio">Tempo médio</th>
+              <th data-key="maiorTempo">Maior tempo</th>
+              <th data-key="toneladas">Perda (t)</th>
+            </tr>
+          </thead>
+          <tbody id="interrupcoesTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Materiais produzidos por dia</h2>
+      <div class="table-controls">
+        <input type="text" id="searchInputMateriais" placeholder="Buscar por data ou material...">
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="materiaisTable">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Data</th>
+              <th style="text-align:left;">Materiais produzidos</th>
+              <th>Vel. técnica teórica média</th>
+              <th>Vel. técnica real média</th>
+            </tr>
+          </thead>
+          <tbody id="materiaisTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <section id="emptyState">
+    <div class="empty-state">
+      <div class="big" id="emptyStateTitle">A procurar dados no servidor...</div>
+      <div id="emptyStateSub">Isto pode demorar alguns segundos. Se falhar, verifique se os arquivos "Base_Producao.xlsx" e "Base_Interrupcoes.xlsx" estão na mesma pasta.</div>
+    </div>
+  </section>
+
+  <footer class="note">
+    As velocidades técnicas por material estão fixas neste painel, uma tabela por máquina (TRANSVERSAL 01 a 05, 608 especificações ao todo). O cálculo de "esperado", "perdido" e "capacidade" usa, para cada dia, a média das velocidades dos materiais produzidos naquele dia na máquina selecionada, ponderada pelo peso real de cada um — dias com materiais fora da tabela de velocidades têm cobertura parcial, sinalizada na tabela. Dias sem nenhum minuto produtivo no turno são ocultados por padrão.
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+/* ---------------------------------------------------------------
+   VELOCIDADES TÉCNICAS — TRANSVERSAL 01 a 05 (ton/h), fixas neste painel
+--------------------------------------------------------------- */
+const VELOCIDADES_POR_MAQUINA = {
+  "TRANSVERSAL 01": {
+    "200777":21.778, "200775":21.482, "200774":21.245, "201083":21.076, "200762":21.052, "201098":20.789,
+    "201082":20.373, "200766":18.148, "214879":17.902, "200758":17.563, "201088":17.563, "200761":17.544,
+    "215135":17.5, "200756":17.324, "201087":17.324, "200754":17.133, "200738":16.978, "201081":16.978,
+    "201054":16.861, "201075":16.732, "209910":16.683, "201073":16.631, "201070":16.514, "201068":16.448,
+    "201053":16.298, "200744":14.636, "210808":14.437, "200737":14.148, "201059":14.05, "217819":13.903,
+    "201057":13.859, "200904":13.762, "201056":13.707, "217818":13.647, "201052":13.582, "200735":13.348,
+    "200731":13.166, "200717":12.903, "200739":12.862, "201026":12.645, "217828":12.583, "201048":12.493,
+    "201047":12.473, "201046":12.431, "201045":12.385, "213156":12.356, "201042":12.336, "214089":12.282,
+    "201025":12.224, "217513":12.09, "215760":11.926, "200714":11.24, "200720":11.123, "200713":11.087,
+    "210806":11.05, "214544":11.009, "200719":10.972, "200699":10.866, "200716":10.752, "201008":10.538,
+    "201033":10.538, "218449":10.538, "213905":10.411, "201007":10.394, "214637":10.321, "201006":10.28,
+    "213932":10.235, "200973":10.187, "201024":10.187, "215162":10.187, "218489":10.144, "218488":10.093,
+    "218487":10.05, "200993":9.749, "200704":9.367, "218519":9.296, "218403":9.24, "200695":9.133,
+    "209320":9.106, "200698":9.055, "200693":9.009, "200683":8.828, "200979":8.782, "211323":8.662,
+    "211321":8.567, "200972":8.489, "218450":8.489, "200966":8.43, "213992":8.316, "212940":8.282,
+    "200700":8.232, "200965":8.224, "200944":8.149, "214635":8.124, "200958":7.775, "200688":7.611,
+    "212116":7.507, "200682":7.357, "200951":7.025, "200950":6.93, "200943":6.791, "200886":6.604,
+    "200902":6.479, "200847":6.384, "200931":6.323, "204005":6.181, "200929":6.141, "200928":6.124,
+    "200906":6.112, "200624":6.042, "216593":5.868, "216592":5.852, "200584":5.84, "212394":5.84,
+    "200862":5.503, "200575":5.433, "200846":5.32, "200917":5.269, "200905":5.093, "200600":5.035,
+    "200583":4.867, "200574":4.527, "212392":0.286, "223706":0.293, "222357":4.867, "215893":4.901,
+    "200623":5.959, "222130":6.042, "220588":0.319, "219783":4.907, "219785":4.991, "220629":6.204,
+    "222746":6.247, "223590":5.264, "222356":5.32, "200860":5.357, "222727":6.428, "219494":6.499,
+    "222332":5.503, "223825":7.697, "200963":8.188, "222355":7.357, "220877":8.854, "222334":9.133,
+    "222623":10.394, "214625":8.008, "214627":9.61, "219777":9.787, "219805":9.841, "219480":8.342,
+    "219808":8.491, "219162":10.374, "220467":8.676, "220469":10.411, "223072":8.689, "220876":10.486,
+    "222806":9.055, "222354":10.866, "200712":10.965, "218518":9.208, "219537":9.224, "219538":9.254,
+    "221089":11.122, "219907":11.214, "222263":11.24, "224009":12.224, "224012":12.645, "214941":11.113,
+    "219503":11.879, "219889":10.075, "219802":12.23, "201032":10.394, "222337":12.903, "220973":13.005,
+    "222131":13.348, "224011":16.298, "224008":16.861, "219571":16.124, "219835":13.589, "219803":16.307,
+    "219463":16.564, "219464":16.672, "219693":17.289, "222155":17.563, "224499":16.978, "224010":21.076,
+    "219469":16.551, "219470":16.637, "223108":20.02, "219471":16.728, "219677":20.112, "219472":16.907,
+    "219473":16.925, "219474":16.969, "213102":20.516, "201097":20.56, "220509":17.33, "215442":20.854,
+    "220511":17.389, "209635":20.915, "219754":17.86, "222156":21.778, "219287":37.234
+  },
+  "TRANSVERSAL 02": {
+    "201299":35.653, "201208":29.711, "201296":26.881, "214638":26.881, "201191":22.401, "208885":16.978,
+    "214632":16.978, "201206":33.776, "213820":33.113, "201204":32.088, "218682":30.56, "208888":14.997,
+    "214626":14.997, "216374":29.414, "201171":14.148, "201207":28.147, "218782":27.902, "201203":26.74,
+    "201143":12.733, "201198":25.466, "214634":25.466, "215641":24.941, "201187":24.193, "214636":24.193,
+    "201193":23.041, "208892":11.318, "214620":11.318, "201190":21.222, "217901":20.543, "218647":10.187,
+    "209638":20.161, "201120":9.432, "200901":17.976, "201183":16.519, "208886":16.084, "214628":16.084,
+    "218685":15.856, "218634":15.828, "201180":15.752, "201176":15.585, "208887":15.28, "214630":15.28,
+    "211280":14.552, "208889":14.208, "214622":14.208, "217785":13.948, "214156":13.782, "201157":13.767,
+    "214666":13.763, "213903":13.497, "208890":13.497, "214624":13.497, "201170":13.403, "200573":13.287,
+    "201166":12.733, "214851":12.593, "208891":12.063, "214643":12.019, "201155":11.84, "201149":11.814,
+    "201142":11.46, "201152":11.248, "203873":11.194, "201133":11.012, "201131":10.723, "214615":10.723,
+    "201128":10.502, "201127":10.448, "201124":10.402, "201123":10.39, "201109":10.187, "214617":10.187,
+    "214629":10.053, "201144":9.55, "201116":9.177, "201113":8.936, "201112":8.751, "201108":8.489,
+    "200738":6.367, "201082":7.64, "219832":9.168, "219678":9.65, "200781":8.277, "200782":9.932,
+    "201139":12.733, "219648":13.127, "219633":7.023, "201147":11.689, "224298":13.497, "224299":14.208,
+    "224300":14.997, "224245":15.28, "224296":16.084, "224297":16.978, "219481":13.766, "219303":16.669,
+    "222532":20.105, "222533":21.222, "222300":20.105, "222535":22.786, "222348":24.052, "224289":24.193,
+    "224290":25.466, "224291":26.881, "211653":21.037, "222585":24.676, "222801":21.796, "219304":26.392,
+    "216375":30.962, "216376":32.682, "214642":32.088, "214640":33.776, "214644":35.653
+  },
+  "TRANSVERSAL 03": {
+    "201082":13.71, "200738":11.425, "201081":11.425, "201054":11.133, "201068":11.012, "201053":10.968,
+    "200737":9.521, "201052":9.14, "200717":8.683, "201026":8.35, "201048":8.306, "201047":8.3,
+    "201042":8.259, "201025":8.226, "200699":7.312, "200716":7.236, "201008":6.958, "201033":6.958,
+    "213905":6.921, "201032":6.916, "214637":6.895, "200973":6.855, "201024":6.855, "200698":6.093,
+    "200695":6.03, "200683":5.941, "200979":5.798, "211323":5.764, "200972":5.713, "200966":5.566,
+    "200944":5.484, "200958":5.369, "200682":4.951, "200943":4.57, "200886":4.36, "200847":4.296,
+    "200931":4.175, "204005":4.133, "200929":4.122, "200928":4.117, "200906":4.113, "200584":3.93,
+    "200575":3.656, "200905":3.428, "201088":11.597, "200574":3.047, "200583":3.275, "200846":3.58,
+    "222356":3.58, "215162":6.855, "224009":8.226, "224012":8.35
+  },
+  "TRANSVERSAL 04": {
+    "200761":13.372, "201081":12.94, "200737":10.784, "200904":10.456, "201052":10.352, "200716":8.195,
+    "201031":7.818, "201024":7.764, "213900":6.91, "200698":6.901, "211321":6.515, "200972":6.47,
+    "214635":6.256, "200682":5.607, "213926":5.597, "200943":5.176, "200902":4.993, "200946":4.989,
+    "200846":4.055, "200905":3.882, "215893":3.729, "200583":3.71, "200574":3.451, "223431":3.723,
+    "219783":3.773, "219785":3.822, "222356":4.055, "200860":4.076, "222355":5.607, "219641":5.009,
+    "220267":5.637, "214625":6.187, "219480":6.384, "219808":6.471, "222806":6.901, "222229":2.492,
+    "222230":2.526, "222573":3.858, "222117":2.552, "222268":3.551, "200718":7.615, "222336":8.195,
+    "219835":10.356, "200739":10.02, "224499":12.94, "219469":12.691, "219470":12.741, "219471":12.795,
+    "219472":12.899, "219473":12.91, "219474":12.935, "219627":6.163, "219629":8.134, "219630":8.219,
+    "219632":10.476
+  },
+  "TRANSVERSAL 05": {
+    "200792":22.924, "200800":19.103, "200779":18.222, "201104":17.634, "200769":15.185, "200760":14.695,
+    "201090":14.695, "201079":14.107, "200746":12.246, "201061":11.756, "200736":11.168, "201051":10.58,
+    "200715":9.405, "200721":9.307, "201034":8.817, "200789":17.44, "214576":16.59, "200788":15.917,
+    "215036":15.697, "200706":7.837, "214575":15.238, "200797":14.533, "200782":14.073, "200777":13.862,
+    "201083":13.415, "214973":13.272, "214415":12.769, "209635":12.738, "201089":12.698, "200775":12.652,
+    "217921":12.52, "215442":12.495, "201098":12.243, "211278":12.19, "200774":11.808, "200781":11.727,
+    "201078":11.662, "200766":11.552, "214416":11.52, "201097":11.427, "213102":11.281, "217811":11.192,
+    "200762":11.186, "200758":11.179, "201088":11.179, "215135":10.905, "201082":10.825, "201054":10.732,
+    "214802":10.694, "217882":10.558, "200756":10.203, "201087":10.203, "201075":10.19, "209633":10.171,
+    "209910":9.996, "201074":9.836, "201073":9.795, "201072":9.585, "208895":9.564, "214834":9.39,
+    "201070":9.368, "200761":9.322, "200744":9.316, "201069":9.233, "214163":9.143, "201068":9.142,
+    "201067":9.025, "200738":9.021, "201081":9.021, "201059":8.943, "201053":8.66, "200735":8.496,
+    "209316":8.404, "209637":8.2, "201057":8.162, "201026":8.049, "208896":7.914, "200904":7.807,
+    "217828":7.783, "200731":7.754, "215981":7.643, "209348":7.565, "200737":7.518, "201048":7.422,
+    "201047":7.346, "215038":7.267, "201052":7.217, "201046":7.189, "200714":7.155, "200720":7.08,
+    "213156":6.925, "215839":6.918, "217863":6.914, "201042":6.856, "200717":6.856, "212954":6.833,
+    "201008":6.708, "201033":6.708, "200713":6.53, "201025":6.495, "200719":6.462, "210806":6.39,
+    "215970":6.303, "214544":6.245, "213905":6.185, "218022":6.141, "201007":6.122, "200712":6.094,
+    "218015":6.024, "200704":5.962, "200699":5.773, "201006":5.713, "200716":5.713, "200979":5.59,
+    "218403":5.442, "200973":5.413, "201024":5.413, "211323":5.101, "200698":4.811, "211321":4.761,
+    "200739":4.76, "200972":4.511, "200993":4.295, "214941":4.113, "200718":3.618, "200906":3.248,
+    "200944":4.33, "200683":4.691, "215162":5.413, "222623":6.122, "218449":6.708, "219777":4.377,
+    "219805":4.497, "219480":4.092, "219808":4.517, "220467":5.154, "220469":6.185, "223072":5.206,
+    "220468":5.694, "220495":6.833, "219537":5.384, "219538":5.498, "219907":7.039, "222263":7.155,
+    "224009":6.495, "224012":8.049, "224442":10.58, "219503":5.56, "219889":5.085, "219802":6.514,
+    "201032":6.122, "201049":7.497, "222131":8.496, "224011":8.66, "224008":10.732, "219571":8.15,
+    "219835":7.238, "219803":8.685, "219463":7.88, "219464":8.155, "219693":10.073, "222155":11.179,
+    "224499":9.021, "224500":10.825, "224010":13.415, "224721":11.72, "219469":7.849, "219470":8.064,
+    "223108":9.821, "219471":8.303, "219677":10.068, "219472":8.808, "219473":8.862, "219474":8.995,
+    "209634":11.71, "219754":10.386, "224502":11.427, "224503":13.712, "224504":16.993, "219694":15.714,
+    "219465":18.719, "201108":12.028, "201109":14.434, "201131":17.887, "208892":23.512
+  }
+};
+const ALL_MACHINES = Object.keys(VELOCIDADES_POR_MAQUINA);
+function velTableFor(machine) { return VELOCIDADES_POR_MAQUINA[machine] || {}; }
+function velCountFor(machine) { return Object.keys(velTableFor(machine)).length; }
+document.getElementById('velCount').textContent = velCountFor('TRANSVERSAL 01');
+
+const STORAGE_KEY = 'trProdutividadeDashboard_v2'; // Chave atualizada para o novo sistema
+
+/* ---------------------------------------------------------------
+   Helpers
+--------------------------------------------------------------- */
+function normStr(s) {
+  return (s === null || s === undefined ? '' : String(s))
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+}
+function excelSerialToDate(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  const utcMs = utcDays * 86400000;
+  const fractional = serial - Math.floor(serial);
+  return new Date(utcMs + Math.round(fractional * 86400000));
+}
+function parseAnyDate(cell) {
+  if (cell instanceof Date) return cell;
+  if (typeof cell === 'number') return excelSerialToDate(cell);
+  if (typeof cell === 'string') {
+    const m = cell.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (m) {
+      return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+    }
+    const d = new Date(cell);
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+function dayKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dayDisplay(d) {
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+}
+function fmtTon(v) { return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtVel(v) { return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtHM(mins) {
+  const h = Math.floor(mins/60), m = Math.round(mins%60);
+  return h + 'h' + String(m).padStart(2,'0');
+}
+function findHeaderRow(rows, requiredNorms) {
+  for (let i = 0; i < rows.length; i++) {
+    const normed = (rows[i]||[]).map(normStr);
+    if (requiredNorms.every(req => normed.some(c => c === req))) {
+      return { rowIdx: i, cols: normed };
+    }
+  }
+  return null;
+}
+function colIndex(cols, target) { return cols.indexOf(target); }
+
+/* ---------------------------------------------------------------
+   Cálculo do Peso Linear (kg/m)
+--------------------------------------------------------------- */
+function getLinearWeight(nome) {
+  if (!nome) return null;
+  const matches = nome.match(/\d+(?:[,.]\d+)?/g);
+  if (!matches) return null;
+  
+  const nums = matches.map(n => parseFloat(n.replace(',', '.')));
+  
+  const espessuras = nums.filter(n => n > 0 && n <= 50).sort((a, b) => a - b);
+  const larguras = nums.filter(n => n >= 100).sort((a, b) => a - b);
+  
+  if (espessuras.length > 0 && larguras.length > 0) {
+    const e = espessuras[0]; 
+    const w = larguras[0];   
+    return (e / 1000) * (w / 1000) * 7850; 
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------
+   Parse dos dados Excel lidos
+--------------------------------------------------------------- */
+function parseProducao(wb) {
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
+  const header = findHeaderRow(rows, ['DATA', 'COD. MATERIAL']) || findHeaderRow(rows, ['DATA', 'MAQUINA']);
+  if (!header) throw new Error('Não encontrei colunas DATA / CÓD. MATERIAL na Produção.');
+  const { rowIdx, cols } = header;
+  const iData = colIndex(cols, 'DATA');
+  const iMaq = colIndex(cols, 'MAQUINA');
+  const iCod = colIndex(cols, 'COD. MATERIAL');
+  const iPeso = colIndex(cols, 'PESO');
+  const iMatNome = colIndex(cols, 'MATERIAL');
+  const records = [];
+  const machines = new Set();
+  for (let r = rowIdx + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row) continue;
+    const cod = row[iCod], peso = row[iPeso], dataCell = row[iData], maq = row[iMaq];
+    if (cod == null || peso == null || !dataCell || !maq) continue;
+    const pesoNum = typeof peso === 'number' ? peso : parseFloat(String(peso).replace(',','.'));
+    if (!pesoNum || pesoNum <= 0) continue;
+    const d = parseAnyDate(dataCell);
+    if (!d) continue;
+    const codStr = typeof cod === 'number' ? String(Math.trunc(cod)) : normStr(cod).replace(/\.0+$/,'');
+    const maqStr = String(maq).trim();
+    const matNome = (iMatNome >= 0 && row[iMatNome]) ? String(row[iMatNome]).trim() : codStr;
+    machines.add(maqStr);
+    records.push({ dayKey: dayKey(d), maquina: maqStr, codMaterial: codStr, materialNome: matNome, pesoKg: pesoNum });
+  }
+  return { records, machines };
+}
+
+function parseInterrupcoes(wb) {
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
+  const header = findHeaderRow(rows, ['MAQUINA', 'INICIO']);
+  if (!header) throw new Error('Não encontrei colunas Máquina / Início nas Interrupções.');
+  const { rowIdx, cols } = header;
+  const iMaq = colIndex(cols, 'MAQUINA');
+  const iInicio = colIndex(cols, 'INICIO');
+  const iTermino = colIndex(cols, 'TERMINO');
+  const iParada = cols.findIndex(c => c.startsWith('PARADA'));
+  const iSintoma = colIndex(cols, 'SINTOMA');
+  const iAgente = cols.findIndex(c => c.startsWith('AGENTE'));
+  const records = [];
+  const machines = new Set();
+  for (let r = rowIdx + 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row) continue;
+    const maq = row[iMaq], inicioCell = row[iInicio], terminoCell = row[iTermino];
+    if (!maq || !inicioCell || !terminoCell) continue;
+    if (iParada >= 0) {
+      const pv = normStr(row[iParada]);
+      if (pv !== 'X' && pv !== 'SIM' && pv !== 'S') continue;
+    }
+    const inicio = parseAnyDate(inicioCell);
+    const termino = parseAnyDate(terminoCell);
+    if (!inicio || !termino || termino <= inicio) continue;
+    const maqStr = String(maq).trim();
+    machines.add(maqStr);
+    const causa = (iSintoma >= 0 && row[iSintoma]) ? String(row[iSintoma]).trim() : 'Não especificado';
+    const agente = (iAgente >= 0 && row[iAgente]) ? String(row[iAgente]).trim() : 'Não especificado';
+    records.push({ maquina: maqStr, inicio, termino, causa, agente });
+  }
+  return { records, machines };
+}
+
+/* ---------------------------------------------------------------
+   Dashboard computation - Máquina Única
+--------------------------------------------------------------- */
+function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
+  const [hi, mi] = turnoIniStr.split(':').map(Number);
+  const [hf, mf] = turnoFimStr.split(':').map(Number);
+  const turnoMin = (hf*60+mf) - (hi*60+mi);
+  if (turnoMin <= 0) throw new Error('O horário de fim do turno precisa ser depois do início.');
+
+  const prodM = prod.records.filter(r => r.maquina === machine);
+  const interrM = interr.records.filter(r => r.maquina === machine);
+  const velTable = velTableFor(machine);
+
+  const byDay = {};
+  let globalMappedKg = 0, globalWeightedVelSum = 0;
+  
+  prodM.forEach(r => {
+    if (!byDay[r.dayKey]) byDay[r.dayKey] = { totalKg: 0, materials: {} };
+    byDay[r.dayKey].totalKg += r.pesoKg;
+    if (!byDay[r.dayKey].materials[r.codMaterial]) {
+      byDay[r.dayKey].materials[r.codMaterial] = { kg: 0, nome: r.materialNome };
+    }
+    byDay[r.dayKey].materials[r.codMaterial].kg += r.pesoKg;
+  });
+
+  const dayVelMediaMap = {};
+  Object.entries(byDay).forEach(([k, dayProd]) => {
+     let mappedKg = 0, weightedVelSum = 0;
+     Object.entries(dayProd.materials).forEach(([cod, info]) => {
+        const vel = velTable[cod];
+        if (vel !== undefined) {
+           mappedKg += info.kg;
+           weightedVelSum += info.kg * vel;
+           globalMappedKg += info.kg;
+           globalWeightedVelSum += info.kg * vel;
+        }
+     });
+     dayVelMediaMap[k] = mappedKg > 0 ? (weightedVelSum / mappedKg) : 0;
+  });
+  
+  const globalVelMedia = globalMappedKg > 0 ? (globalWeightedVelSum / globalMappedKg) : 0;
+
+  const stoppedByDay = {};
+  const causesMinutes = {};
+  const causesByDay = {};
+  const agentesMinutes = {};
+  const agentesByDay = {};
+  const detalhamentoMap = {}; 
+  
+  const causesTonByDay = {};
+  const agentesTonByDay = {};
+  const causesTonTotal = {};
+  const agentesTonTotal = {};
+  const prevMaintEstimatedTonsByDay = {};
+
+  interrM.forEach(rec => {
+    let cursor = new Date(rec.inicio.getFullYear(), rec.inicio.getMonth(), rec.inicio.getDate());
+    const endDay = new Date(rec.termino.getFullYear(), rec.termino.getMonth(), rec.termino.getDate());
+    const isPrevMaint = rec.causa.trim().toUpperCase() === 'MANUTENÇÃO PREVENTIVA';
+
+    while (cursor <= endDay) {
+      const tStart = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), hi, mi);
+      const tEnd = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), hf, mf);
+      const ovStart = rec.inicio > tStart ? rec.inicio : tStart;
+      const ovEnd = rec.termino < tEnd ? rec.termino : tEnd;
+      const mins = (ovEnd - ovStart) / 60000;
+      
+      if (mins > 0) {
+        const k = dayKey(cursor);
+        
+        stoppedByDay[k] = (stoppedByDay[k]||0) + mins;
+        
+        causesMinutes[rec.causa] = (causesMinutes[rec.causa]||0) + mins;
+        agentesMinutes[rec.agente] = (agentesMinutes[rec.agente]||0) + mins;
+        
+        if (!agentesByDay[k]) agentesByDay[k] = {};
+        agentesByDay[k][rec.agente] = (agentesByDay[k][rec.agente]||0) + mins;
+        if (!causesByDay[k]) causesByDay[k] = {};
+        causesByDay[k][rec.causa] = (causesByDay[k][rec.causa]||0) + mins;
+
+        let vel = dayVelMediaMap[k] || 0;
+        let isEstimated = false;
+        if (vel === 0 && isPrevMaint) {
+           vel = globalVelMedia;
+           isEstimated = true;
+        }
+        
+        const tonsLost = vel * (mins / 60);
+
+        if (isEstimated) {
+           prevMaintEstimatedTonsByDay[k] = (prevMaintEstimatedTonsByDay[k]||0) + tonsLost;
+        }
+
+        if (!causesTonByDay[k]) causesTonByDay[k] = {};
+        causesTonByDay[k][rec.causa] = (causesTonByDay[k][rec.causa]||0) + tonsLost;
+
+        if (!agentesTonByDay[k]) agentesTonByDay[k] = {};
+        agentesTonByDay[k][rec.agente] = (agentesTonByDay[k][rec.agente]||0) + tonsLost;
+
+        causesTonTotal[rec.causa] = (causesTonTotal[rec.causa]||0) + tonsLost;
+        agentesTonTotal[rec.agente] = (agentesTonTotal[rec.agente]||0) + tonsLost;
+
+        const detKey = `${rec.causa}|${rec.agente}`;
+        if (!detalhamentoMap[detKey]) {
+          detalhamentoMap[detKey] = {
+            causa: rec.causa,
+            agente: rec.agente,
+            ocorrencias: 0,
+            tempoAcumulado: 0,
+            maiorTempo: 0,
+            toneladas: 0
+          };
+        }
+        detalhamentoMap[detKey].ocorrencias += 1;
+        detalhamentoMap[detKey].tempoAcumulado += mins;
+        if (mins > detalhamentoMap[detKey].maiorTempo) {
+          detalhamentoMap[detKey].maiorTempo = mins;
+        }
+        detalhamentoMap[detKey].toneladas += tonsLost;
+      }
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()+1);
+    }
+  });
+
+  const excluidosCausaDet = ['FALTA DEMANDA', 'ESPERA FIM DE SEMANA / FERIADO', 'ESPERA FIM DE SEMANA/FERIADO'];
+  const excluidosAgenteDet = ['TEMPO LIVRE'];
+
+  const detalhamentoInterrupcoes = Object.values(detalhamentoMap)
+    .filter(d => !excluidosCausaDet.includes(d.causa.trim().toUpperCase()) && !excluidosAgenteDet.includes(d.agente.trim().toUpperCase()))
+    .map(d => {
+      d.tempoMedio = d.tempoAcumulado / d.ocorrencias;
+      return d;
+    });
+
+  const allKeys = new Set([...Object.keys(byDay), ...Object.keys(stoppedByDay)]);
+  const days = [];
+  let unmappedWeightTotal = 0, mappedWeightTotal = 0;
+
+  allKeys.forEach(k => {
+    const dayProd = byDay[k] || { totalKg: 0, materials: {} };
+    const stoppedMin = Math.min(stoppedByDay[k] || 0, turnoMin);
+    const produtivoMin = Math.max(turnoMin - stoppedMin, 0);
+    const totalKg = dayProd.totalKg;
+
+    let mappedKg = 0, weightedVelSum = 0;
+    let totalMetros = 0;
+    let mappedKgMetros = 0;
+    const materiaisDoDia = [];
+    
+    Object.entries(dayProd.materials).forEach(([cod, info]) => {
+      const vel = velTable[cod];
+      const pesoLinear = getLinearWeight(info.nome);
+      const metros = pesoLinear ? (info.kg / pesoLinear) : 0;
+      
+      if (vel !== undefined) { 
+        mappedKg += info.kg; 
+        weightedVelSum += info.kg * vel; 
+      }
+      
+      if (metros > 0) {
+        totalMetros += metros;
+        mappedKgMetros += info.kg;
+      }
+      
+      materiaisDoDia.push({ cod, nome: info.nome, ton: info.kg/1000, vel: vel !== undefined ? vel : null });
+    });
+    
+    materiaisDoDia.sort((a,b) => b.ton - a.ton);
+    unmappedWeightTotal += (totalKg - mappedKg);
+    mappedWeightTotal += mappedKg;
+    
+    const cobertura = totalKg > 0 ? (mappedKg / totalKg * 100) : null;
+    const velMedia = dayVelMediaMap[k] || 0;
+
+    const realTon = totalKg / 1000;
+    const esperadoTon = velMedia * (produtivoMin/60);
+    
+    let perdidoTon = velMedia * (stoppedMin/60);
+    let perfeitoTon = velMedia * (turnoMin/60);
+
+    if (prevMaintEstimatedTonsByDay[k]) {
+       perdidoTon += prevMaintEstimatedTonsByDay[k];
+       perfeitoTon += prevMaintEstimatedTonsByDay[k];
+    }
+
+    const perdaRendimentoTon = Math.max(perfeitoTon - realTon - perdidoTon, 0);
+    const eficiencia = esperadoTon > 0 ? (realTon / esperadoTon * 100) : null;
+    const velRealMedia = produtivoMin > 0 ? (realTon / (produtivoMin / 60)) : 0;
+
+    let velTeoricaMMin = null;
+    let velRealMMin = null;
+    if (mappedKgMetros > 0 && totalMetros > 0) {
+       const pesoLinearMedioDia = mappedKgMetros / totalMetros; 
+       if (velMedia > 0) velTeoricaMMin = (velMedia * 1000 / 60) / pesoLinearMedioDia;
+       if (velRealMedia > 0) velRealMMin = (velRealMedia * 1000 / 60) / pesoLinearMedioDia;
+    }
+
+    const [y,m,d] = k.split('-').map(Number);
+    const dateObj = new Date(y, m-1, d);
+
+    days.push({
+      dayKey: k, dateObj, dateDisplay: dayDisplay(dateObj),
+      stoppedMin, produtivoMin, totalKg, realTon, esperadoTon, perdidoTon, perfeitoTon, perdaRendimentoTon,
+      eficiencia, cobertura, hasProduction: totalKg > 0, materiaisDoDia, velMedia, velRealMedia,
+      velTeoricaMMin, velRealMMin
+    });
+  });
+  days.sort((a,b) => a.dateObj - b.dateObj);
+
+  const causesArr = Object.entries(causesMinutes)
+    .filter(([causa]) => !['FALTA DEMANDA', 'ESPERA FIM DE SEMANA / FERIADO'].includes(causa.trim().toUpperCase()))
+    .map(([causa, min]) => ({ causa, min, ton: causesTonTotal[causa] || 0 }))
+    .sort((a,b) => b.min - a.min)
+    .slice(0, 8);
+
+  const agentesArr = Object.entries(agentesMinutes)
+    .filter(([agente]) => !['TEMPO LIVRE'].includes(agente.trim().toUpperCase()))
+    .map(([causa, min]) => ({ causa, min, ton: agentesTonTotal[causa] || 0 }))
+    .sort((a,b) => b.min - a.min)
+    .slice(0, 8);
+
+  const warnings = [];
+  if (velCountFor(machine) === 0) {
+    warnings.push(`Não há tabela de velocidades técnicas cadastrada para ${machine} neste painel.`);
+  } else if (unmappedWeightTotal > 0) {
+    const pct = (unmappedWeightTotal / (unmappedWeightTotal+mappedWeightTotal) * 100).toFixed(1);
+    warnings.push(`${pct}% do peso produzido corresponde a materiais sem velocidade técnica cadastrada para ${machine}.`);
+  }
+
+  return { days, causes: causesArr, causesByDay, causesTonByDay, agentes: agentesArr, agentesByDay, agentesTonByDay, warnings, turnoMin, detalhamentoInterrupcoes };
+}
+
+/* ---------------------------------------------------------------
+   Agregador para a Visão Global (Todas as Máquinas)
+--------------------------------------------------------------- */
+function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
+  let mergedDaysMap = {};
+  let mergedDetalhamentoMap = {};
+  let mergedCausesByDay = {};
+  let mergedAgentesByDay = {};
+  let mergedCausesTonByDay = {};
+  let mergedAgentesTonByDay = {};
+  let allWarnings = new Set();
+  
+  const [hi, mi] = turnoIniStr.split(':').map(Number);
+  const [hf, mf] = turnoFimStr.split(':').map(Number);
+  const turnoMinSingle = (hf*60+mf) - (hi*60+mi);
+  
+  const sel = document.getElementById('machineSelect');
+  const allMaquinas = Array.from(sel.options).map(o => o.value).filter(v => v !== 'TODAS');
+  const turnoMinTotal = turnoMinSingle * allMaquinas.length; 
+  
+  allMaquinas.forEach(maq => {
+    const res = computeDashboard(prod, interr, maq, turnoIniStr, turnoFimStr);
+    
+    res.warnings.forEach(w => allWarnings.add(`[${maq}] ` + w));
+    
+    res.days.forEach(d => {
+      if (!mergedDaysMap[d.dayKey]) {
+        mergedDaysMap[d.dayKey] = {
+          dayKey: d.dayKey, dateObj: d.dateObj, dateDisplay: d.dateDisplay,
+          stoppedMin: 0, produtivoMin: 0, totalKg: 0, realTon: 0,
+          esperadoTon: 0, perdidoTon: 0, perfeitoTon: 0, perdaRendimentoTon: 0,
+          materiaisDoDia: [], hasProduction: false,
+          sumMappedKg: 0, sumWeightedVel: 0
+        };
+      }
+      const md = mergedDaysMap[d.dayKey];
+      md.stoppedMin += d.stoppedMin;
+      md.produtivoMin += d.produtivoMin;
+      md.totalKg += d.totalKg;
+      md.realTon += d.realTon;
+      md.esperadoTon += d.esperadoTon;
+      md.perdidoTon += d.perdidoTon;
+      md.perfeitoTon += d.perfeitoTon;
+      md.perdaRendimentoTon += d.perdaRendimentoTon;
+      if (d.hasProduction) md.hasProduction = true;
+      
+      const mappedKg = (d.totalKg > 0 && d.cobertura !== null) ? (d.cobertura/100 * d.totalKg) : 0;
+      md.sumMappedKg += mappedKg;
+      md.sumWeightedVel += (mappedKg * d.velMedia);
+      
+      d.materiaisDoDia.forEach(m => {
+        md.materiaisDoDia.push({...m, nome: `<span style="color:var(--accent); font-weight:600; font-size:11px;">[${maq.replace('TRANSVERSAL ','TR')}]</span> ${m.nome}`});
+      });
+    });
+    
+    res.detalhamentoInterrupcoes.forEach(det => {
+      const k = `${det.causa}|${det.agente}`;
+      if (!mergedDetalhamentoMap[k]) {
+        mergedDetalhamentoMap[k] = {...det, ocorrencias:0, tempoAcumulado:0, maiorTempo:0, toneladas:0};
+      }
+      mergedDetalhamentoMap[k].ocorrencias += det.ocorrencias;
+      mergedDetalhamentoMap[k].tempoAcumulado += det.tempoAcumulado;
+      mergedDetalhamentoMap[k].maiorTempo = Math.max(mergedDetalhamentoMap[k].maiorTempo, det.maiorTempo);
+      mergedDetalhamentoMap[k].toneladas += det.toneladas;
+    });
+    
+    const mergeDicts = (source, target) => {
+      Object.keys(source).forEach(day => {
+        if(!target[day]) target[day] = {};
+        Object.entries(source[day]).forEach(([k, v]) => {
+          target[day][k] = (target[day][k]||0) + v;
+        });
+      });
+    };
+    mergeDicts(res.causesByDay, mergedCausesByDay);
+    mergeDicts(res.agentesByDay, mergedAgentesByDay);
+    mergeDicts(res.causesTonByDay, mergedCausesTonByDay);
+    mergeDicts(res.agentesTonByDay, mergedAgentesTonByDay);
+  });
+  
+  const days = Object.values(mergedDaysMap).map(md => {
+    md.cobertura = md.totalKg > 0 ? (md.sumMappedKg / md.totalKg * 100) : null;
+    md.velMedia = md.sumMappedKg > 0 ? (md.sumWeightedVel / md.sumMappedKg) : 0;
+    md.velRealMedia = md.produtivoMin > 0 ? (md.realTon / (md.produtivoMin / 60)) : 0;
+    md.eficiencia = md.esperadoTon > 0 ? (md.realTon / md.esperadoTon * 100) : null;
+    md.velTeoricaMMin = null; 
+    md.velRealMMin = null;
+    md.materiaisDoDia.sort((a,b) => b.ton - a.ton);
+    return md;
+  }).sort((a,b) => a.dateObj - b.dateObj);
+  
+  const calcTotals = (byDayDict, tonByDayDict) => {
+    const minTotals = {}, tonTotals = {};
+    Object.values(byDayDict).forEach(dObj => {
+      Object.entries(dObj).forEach(([k,v]) => minTotals[k] = (minTotals[k]||0)+v);
+    });
+    Object.values(tonByDayDict).forEach(dObj => {
+      Object.entries(dObj).forEach(([k,v]) => tonTotals[k] = (tonTotals[k]||0)+v);
+    });
+    const excluidos = ['FALTA DEMANDA', 'ESPERA FIM DE SEMANA / FERIADO', 'TEMPO LIVRE'];
+    return Object.entries(minTotals)
+      .filter(([nome]) => !excluidos.includes(nome.trim().toUpperCase()))
+      .map(([causa, min]) => ({causa, min, ton: tonTotals[causa]||0}))
+      .sort((a,b) => b.min - a.min)
+      .slice(0,8);
+  };
+  
+  const detalhamentoInterrupcoes = Object.values(mergedDetalhamentoMap).map(d => {
+    d.tempoMedio = d.tempoAcumulado / d.ocorrencias;
+    return d;
+  });
+  
+  return {
+    days, 
+    causes: calcTotals(mergedCausesByDay, mergedCausesTonByDay), 
+    causesByDay: mergedCausesByDay, 
+    causesTonByDay: mergedCausesTonByDay,
+    agentes: calcTotals(mergedAgentesByDay, mergedAgentesTonByDay), 
+    agentesByDay: mergedAgentesByDay, 
+    agentesTonByDay: mergedAgentesTonByDay,
+    warnings: Array.from(allWarnings), 
+    turnoMin: turnoMinTotal, 
+    detalhamentoInterrupcoes
+  };
+}
+
+/* ---------------------------------------------------------------
+   Rendering
+--------------------------------------------------------------- */
+let dailyChartInst = null, causesChartInst = null, agentesChartInst = null;
+let currentDays = [];
+let currentDetalhamento = [];
+let currentCausesByDay = {};
+let currentAgentesByDay = {};
+let currentCausesTonByDay = {};
+let currentAgentesTonByDay = {};
+let sortKey = 'data', sortAsc = true;
+let sortKeyInt = 'tempoAcumulado', sortAscInt = false;
+
+function topCauses(minutesObj, limit, tonsObj) {
+  tonsObj = tonsObj || {};
+  const excluidos = ['FALTA DEMANDA', 'ESPERA FIM DE SEMANA / FERIADO', 'TEMPO LIVRE'];
+  return Object.entries(minutesObj)
+    .filter(([nome]) => !excluidos.includes(nome.trim().toUpperCase()))
+    .map(([causa, min]) => ({ causa, min, ton: tonsObj[causa] || 0 }))
+    .sort((a,b) => b.min - a.min)
+    .slice(0, limit);
+}
+
+function effClass(eff) {
+  if (eff === null) return '';
+  if (eff >= 95) return 'eff-good';
+  if (eff >= 80) return 'eff-mid';
+  return 'eff-bad';
+}
+
+function renderWarnings(warnings) {
+  const el = document.getElementById('warnings');
+  if (!warnings.length) { el.classList.remove('show'); el.innerHTML=''; return; }
+  el.classList.add('show');
+  el.innerHTML = warnings.map(w => `<div class="warning-box"><b>Atenção —</b> ${w}</div>`).join('');
+}
+
+function renderKPIs(days, filterKey = '__all__') {
+  let shown = days.filter(d => d.hasProduction || d.stoppedMin < currentTurnoMin || d.perdidoTon > 0);
+  if (filterKey !== '__all__') shown = shown.filter(d => d.dayKey === filterKey);
+
+  const real = shown.reduce((s,d)=>s+d.realTon,0);
+  const esperado = shown.reduce((s,d)=>s+d.esperadoTon,0);
+  const perdido = shown.reduce((s,d)=>s+d.perdidoTon,0);
+  const perfeito = shown.reduce((s,d)=>s+d.perfeitoTon,0);
+  
+  document.getElementById('kpiReal').innerHTML = fmtTon(real) + '<span class="kpi-unit">t</span>';
+  document.getElementById('kpiEsperado').innerHTML = fmtTon(esperado) + '<span class="kpi-unit">t</span>';
+  document.getElementById('kpiPerdido').innerHTML = fmtTon(perdido) + '<span class="kpi-unit">t</span>';
+  document.getElementById('kpiPerfeito').innerHTML = fmtTon(perfeito) + '<span class="kpi-unit">t</span>';
+}
+
+function renderTable(days, filterText) {
+  const showAll = document.getElementById('showAllDays').checked;
+  let rows = days.filter(d => showAll || d.hasProduction || d.stoppedMin < currentTurnoMin || d.perdidoTon > 0);
+  if (filterText) rows = rows.filter(d => d.dateDisplay.includes(filterText));
+
+  rows = rows.slice().sort((a,b) => {
+    let av, bv;
+    switch(sortKey) {
+      case 'data': av=a.dateObj; bv=b.dateObj; break;
+      case 'cobertura': av=a.cobertura??-1; bv=b.cobertura??-1; break;
+      case 'parado': av=a.stoppedMin; bv=b.stoppedMin; break;
+      case 'produtivo': av=a.produtivoMin; bv=b.produtivoMin; break;
+      case 'velmedia': av=a.velMedia; bv=b.velMedia; break;
+      case 'real': av=a.realTon; bv=b.realTon; break;
+      case 'esperado': av=a.esperadoTon; bv=b.esperadoTon; break;
+      case 'perdido': av=a.perdidoTon; bv=b.perdidoTon; break;
+      case 'perfeito': av=a.perfeitoTon; bv=b.perfeitoTon; break;
+      case 'eficiencia': av=a.eficiencia??-1; bv=b.eficiencia??-1; break;
+      default: av=a.dateObj; bv=b.dateObj;
+    }
+    return sortAsc ? (av>bv?1:av<bv?-1:0) : (av<bv?1:av>bv?-1:0);
+  });
+
+  const tbody = document.getElementById('tableBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum dia encontrado</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(d => `
+    <tr>
+      <td>${d.dateDisplay}</td>
+      <td style="text-align:right;">${d.cobertura===null?'—':d.cobertura.toFixed(0)+'%'}${d.cobertura!==null && d.cobertura<100 ? '<span class="cov-flag">parcial</span>':''}</td>
+      <td>${fmtHM(d.stoppedMin)}</td>
+      <td>${fmtHM(d.produtivoMin)}</td>
+      <td>${d.velMedia > 0 ? fmtVel(d.velMedia) + ' t/h' : '—'}</td>
+      <td>${fmtTon(d.realTon)} t</td>
+      <td>${fmtTon(d.esperadoTon)} t</td>
+      <td>${fmtTon(d.perdidoTon)} t</td>
+      <td>${fmtTon(d.perfeitoTon)} t</td>
+      <td class="${effClass(d.eficiencia)}">${d.eficiencia===null?'—':d.eficiencia.toFixed(1)+'%'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderDetalhamentoTable(detalhamento, filterText) {
+  let rows = detalhamento;
+  if (filterText) {
+    const ft = filterText.toLowerCase();
+    rows = rows.filter(d => d.causa.toLowerCase().includes(ft) || d.agente.toLowerCase().includes(ft));
+  }
+  
+  rows = rows.slice().sort((a,b) => {
+    let av = a[sortKeyInt], bv = b[sortKeyInt];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    return sortAscInt ? (av>bv?1:av<bv?-1:0) : (av<bv?1:av>bv?-1:0);
+  });
+  
+  const tbody = document.getElementById('interrupcoesTableBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhuma interrupção encontrada</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(d => `
+    <tr>
+      <td style="text-align:left;">${d.causa}</td>
+      <td style="text-align:left;">${d.agente}</td>
+      <td>${d.ocorrencias}</td>
+      <td>${fmtHM(d.tempoAcumulado)}</td>
+      <td>${fmtHM(d.tempoMedio)}</td>
+      <td>${fmtHM(d.maiorTempo)}</td>
+      <td>${fmtTon(d.toneladas)} t</td>
+    </tr>
+  `).join('');
+}
+
+function renderMateriaisTable(days, filterText) {
+  let rows = days.filter(d => d.hasProduction);
+  if (filterText) {
+    const ft = filterText.toLowerCase();
+    rows = rows.filter(d =>
+      d.dateDisplay.includes(filterText) ||
+      d.materiaisDoDia.some(m => m.nome.toLowerCase().includes(ft) || m.cod.includes(filterText))
+    );
+  }
+  rows = rows.slice().sort((a,b) => a.dateObj - b.dateObj);
+
+  const tbody = document.getElementById('materiaisTableBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum dia encontrado</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(d => {
+    const materiaisHtml = d.materiaisDoDia.map(m => {
+      const pct = d.realTon > 0 ? ((m.ton / d.realTon) * 100).toFixed(1).replace('.', ',') : '0,0';
+      const velStr = m.vel !== null ? ` · Vel. teórica: ${fmtVel(m.vel)} t/h` : ' <span class="cov-flag">sem vel.</span>';
+      return `${m.nome} <span style="color:var(--text-muted);">(${fmtTon(m.ton)} t — ${pct}%)${velStr}</span>`;
+    }).join('<br>');
+    
+    const velTeoricaHtml = d.velMedia > 0 
+       ? `${fmtVel(d.velMedia)} t/h` + (d.velTeoricaMMin ? ` <span style="color:var(--text-muted); font-size:11.5px;">(${fmtVel(d.velTeoricaMMin)} m/min)</span>` : '')
+       : '—';
+       
+    const velRealHtml = d.velRealMedia > 0 
+       ? `${fmtVel(d.velRealMedia)} t/h` + (d.velRealMMin ? ` <span style="color:var(--text-muted); font-size:11.5px;">(${fmtVel(d.velRealMMin)} m/min)</span>` : '')
+       : '—';
+    
+    return `
+      <tr>
+        <td style="text-align:left; white-space:nowrap; vertical-align:top;">${d.dateDisplay}</td>
+        <td style="text-align:left; font-family:var(--sans);">${materiaisHtml}</td>
+        <td style="vertical-align:top;">${velTeoricaHtml}</td>
+        <td style="vertical-align:top;">${velRealHtml}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderDailyChart(days) {
+  const shown = days.filter(d => d.hasProduction || d.stoppedMin < currentTurnoMin || d.perdidoTon > 0);
+  const ctx = document.getElementById('dailyChart');
+  const existingDaily = Chart.getChart('dailyChart');
+  if (existingDaily) existingDaily.destroy();
+  
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? '#3a3c36' : '#e2e0d8';
+  const textColor = isDark ? '#b3b3aa' : '#565a52';
+  const fmt1 = (v) => v.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  dailyChartInst = new Chart(ctx, {
+    data: {
+      labels: shown.map(d => d.dateDisplay.slice(0,5)),
+      datasets: [
+        { type:'bar', label:'Real', data: shown.map(d=>d.realTon), backgroundColor:'#00417b', order:2,
+          datalabels: { color:'#ffffff', font:{size:10, weight:'600'}, formatter:(v)=> v>=1 ? fmt1(v) : '' } },
+        { type:'bar', label:'Perdido em paradas', data: shown.map(d=>d.perdidoTon), backgroundColor:'#3aa0e0', order:2,
+          datalabels: { color:'#ffffff', font:{size:10, weight:'600'}, formatter:(v)=> v>=1 ? fmt1(v) : '' } },
+        { type:'bar', label:'Perda de rendimento', data: shown.map(d=>d.perdaRendimentoTon), backgroundColor:'#8a959e', order:2,
+          datalabels: { color:'#ffffff', font:{size:10, weight:'600'}, formatter:(v)=> v>=1 ? fmt1(v) : '' } },
+        { type:'line', label:'Capacidade teórica', data: shown.map(d=>d.perfeitoTon), borderColor:'#4a5f7f', borderDash:[4,3], borderWidth:1.5, pointRadius:0, fill:false, order:1,
+          datalabels: { display:false } }
+      ]
+    },
+    plugins: [ChartDataLabels],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      
+      onClick: (e, elements, chart) => {
+        if (elements.length > 0) {
+          const dataIndex = elements[0].index;
+          const clickedDay = shown[dataIndex];
+          if (clickedDay) {
+            const dayKey = clickedDay.dayKey;
+            const dateStr = clickedDay.dateDisplay;
+            
+            const kpiSelect = document.getElementById('kpiDayFilter');
+            if(kpiSelect.querySelector(`option[value="${dayKey}"]`)) {
+              kpiSelect.value = dayKey;
+              kpiSelect.dispatchEvent(new Event('change'));
+            }
+
+            const causesSelect = document.getElementById('causesDayFilter');
+            if(causesSelect.querySelector(`option[value="${dayKey}"]`)) {
+              causesSelect.value = dayKey;
+              causesSelect.dispatchEvent(new Event('change'));
+            }
+
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = dateStr;
+            searchInput.dispatchEvent(new Event('input'));
+
+            const searchMateriais = document.getElementById('searchInputMateriais');
+            searchMateriais.value = dateStr;
+            searchMateriais.dispatchEvent(new Event('input'));
+            
+            document.getElementById('clearFilterWrap').style.display = 'block';
+          }
+        }
+      },
+      onHover: (e, elements, chart) => {
+        chart.canvas.style.cursor = elements?.length > 0 ? 'pointer' : 'default';
+      },
+      plugins: {
+        legend: { position:'bottom', labels:{color:textColor, font:{size:11}} },
+        datalabels: { anchor:'center', align:'center' }
+      },
+      scales: {
+        x: { stacked:true, grid:{color:gridColor}, ticks:{color:textColor, font:{size:10}} },
+        y: { stacked:true, grid:{color:gridColor}, ticks:{color:textColor, font:{size:10}}, title:{display:true, text:'toneladas', color:textColor, font:{size:10}} }
+      }
+    }
+  });
+}
+
+function renderCausesChart(causes) {
+  renderHorizontalBarChart('causesChart', 'causesChartInstRef', causes, 'Principais causas de parada (min · toneladas perdidas, no turno)');
+}
+function renderAgentesChart(agentes) {
+  renderHorizontalBarChart('agentesChart', 'agentesChartInstRef', agentes, 'Principais agentes causadores (min · toneladas perdidas, no turno)');
+}
+function renderHorizontalBarChart(canvasId, instRefName, items, titleText) {
+  const ctx = document.getElementById(canvasId);
+  const existingChart = Chart.getChart(canvasId);
+  if (existingChart) existingChart.destroy();
+  
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? '#3a3c36' : '#e2e0d8';
+  const textColor = isDark ? '#b3b3aa' : '#565a52';
+  const lossColor = '#00417b';
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: items.map(c => c.causa.length>28 ? c.causa.slice(0,26)+'…' : c.causa),
+      datasets: [{ label:'Minutos parados', data: items.map(c=>Math.round(c.min)), backgroundColor:lossColor,
+        datalabels: { anchor:'end', align:'end', color:textColor, font:{size:10.5, weight:'600'},
+          formatter:(v, ctx) => Math.round(v) + ' min · ' + fmtTon(ctx.dataset.tons[ctx.dataIndex]) + ' t' },
+        tons: items.map(c=>c.ton) }]
+    },
+    plugins: [ChartDataLabels],
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 110 } },
+      plugins: {
+        legend: { display:false },
+        title: { display:true, text:titleText, color:textColor, font:{size:12}, align:'start' },
+        datalabels: {}
+      },
+      scales: {
+        x: { grid:{color:gridColor}, ticks:{color:textColor, font:{size:10}} },
+        y: { grid:{display:false}, ticks:{color:textColor, font:{size:10.5}, crossAlign: 'far'} }
+      }
+    }
+  });
+  if (instRefName === 'causesChartInstRef') causesChartInst = chart; else agentesChartInst = chart;
+}
+
+let currentTurnoMin = 600;
+
+function renderAll(result) {
+  document.getElementById('clearFilterWrap').style.display = 'none'; 
+  currentDays = result.days;
+  currentDetalhamento = result.detalhamentoInterrupcoes || [];
+  currentTurnoMin = result.turnoMin;
+  currentCausesByDay = result.causesByDay || {};
+  currentAgentesByDay = result.agentesByDay || {};
+  currentCausesTonByDay = result.causesTonByDay || {};
+  currentAgentesTonByDay = result.agentesTonByDay || {};
+  
+  renderWarnings(result.warnings);
+  
+  populateKpiDayFilter(result.days); 
+  renderKPIs(result.days, document.getElementById('kpiDayFilter').value); 
+
+  renderTable(result.days, document.getElementById('searchInput').value.trim());
+  renderDetalhamentoTable(currentDetalhamento, document.getElementById('searchInputInterrupcoes').value.trim());
+  renderMateriaisTable(result.days, document.getElementById('searchInputMateriais').value.trim());
+  
+  renderDailyChart(result.days);
+  populateCausesDayFilter(result.days);
+  renderCausesChart(result.causes);
+  renderAgentesChart(result.agentes);
+  document.getElementById('resultsSection').style.display = '';
+  document.getElementById('emptyState').style.display = 'none';
+}
+
+function populateKpiDayFilter(days) {
+  const sel = document.getElementById('kpiDayFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="__all__">Todos os dias do período</option>';
+  
+  days.forEach(d => {
+    if (d.hasProduction || d.stoppedMin < currentTurnoMin || d.perdidoTon > 0) {
+      const opt = document.createElement('option');
+      opt.value = d.dayKey;
+      opt.textContent = d.dateDisplay;
+      sel.appendChild(opt);
+    }
+  });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else sel.value = '__all__';
+}
+
+document.getElementById('kpiDayFilter').addEventListener('change', (e) => {
+  renderKPIs(currentDays, e.target.value);
+});
+
+function populateCausesDayFilter(days) {
+  const sel = document.getElementById('causesDayFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="__all__">Todos os dias do período</option>';
+  days.filter(d => currentCausesByDay[d.dayKey]).forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.dayKey; opt.textContent = d.dateDisplay; sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else sel.value = '__all__';
+}
+
+document.getElementById('causesDayFilter').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (val === '__all__') {
+    const totalsCausas = {}, totalsCausasTon = {};
+    Object.values(currentCausesByDay).forEach(dayObj => {
+      Object.entries(dayObj).forEach(([causa, min]) => { totalsCausas[causa] = (totalsCausas[causa]||0) + min; });
+    });
+    Object.values(currentCausesTonByDay).forEach(dayObj => {
+      Object.entries(dayObj).forEach(([causa, ton]) => { totalsCausasTon[causa] = (totalsCausasTon[causa]||0) + ton; });
+    });
+    renderCausesChart(topCauses(totalsCausas, 8, totalsCausasTon));
+
+    const totalsAgentes = {}, totalsAgentesTon = {};
+    Object.values(currentAgentesByDay).forEach(dayObj => {
+      Object.entries(dayObj).forEach(([agente, min]) => { totalsAgentes[agente] = (totalsAgentes[agente]||0) + min; });
+    });
+    Object.values(currentAgentesTonByDay).forEach(dayObj => {
+      Object.entries(dayObj).forEach(([agente, ton]) => { totalsAgentesTon[agente] = (totalsAgentesTon[agente]||0) + ton; });
+    });
+    renderAgentesChart(topCauses(totalsAgentes, 8, totalsAgentesTon));
+  } else {
+    renderCausesChart(topCauses(currentCausesByDay[val] || {}, 8, currentCausesTonByDay[val] || {}));
+    renderAgentesChart(topCauses(currentAgentesByDay[val] || {}, 8, currentAgentesTonByDay[val] || {}));
+  }
+});
+
+document.getElementById('btnClearChartFilter').addEventListener('click', () => {
+  const kpiSelect = document.getElementById('kpiDayFilter');
+  kpiSelect.value = '__all__'; kpiSelect.dispatchEvent(new Event('change'));
+
+  const causesSelect = document.getElementById('causesDayFilter');
+  causesSelect.value = '__all__'; causesSelect.dispatchEvent(new Event('change'));
+
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = ''; searchInput.dispatchEvent(new Event('input'));
+
+  const searchMateriais = document.getElementById('searchInputMateriais');
+  searchMateriais.value = ''; searchMateriais.dispatchEvent(new Event('input'));
+
+  document.getElementById('clearFilterWrap').style.display = 'none';
+});
+
+/* ---------------------------------------------------------------
+   Interatividade de Filtros & Processamento Automático
+--------------------------------------------------------------- */
+let producaoData = null, interrupcoesData = null;
+
+function statusMsg(text, isError) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = text;
+  el.style.color = isError ? 'var(--red)' : 'var(--accent)';
+}
+
+function refreshMachineOptions() {
+  const set = new Set(ALL_MACHINES);
+  if (producaoData) producaoData.machines.forEach(m => set.add(m));
+  if (interrupcoesData) interrupcoesData.machines.forEach(m => set.add(m));
+  const sel = document.getElementById('machineSelect');
+  
+  let prev = window._savedMachine || sel.value; 
+  sel.innerHTML = '<option value="TODAS" style="font-weight: bold;">TODAS AS MÁQUINAS</option>';
+  
+  const list = Array.from(set).sort();
+  list.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m + (velCountFor(m) === 0 ? ' (sem velocidades cadastradas)' : '');
+    sel.appendChild(opt);
+  });
+  
+  if (prev && (list.includes(prev) || prev === 'TODAS')) sel.value = prev;
+  else if (list.includes('TRANSVERSAL 01')) sel.value = 'TRANSVERSAL 01';
+  else sel.value = 'TODAS';
+  
+  updateMachineTag();
+}
+
+function updateMachineTag() {
+  const m = document.getElementById('machineSelect').value;
+  if (m === 'TODAS') {
+    document.getElementById('machineTag').innerHTML = 'TODAS AS MÁQUINAS · <span>Visão consolidada</span>';
+  } else {
+    document.getElementById('machineTag').innerHTML = m + ' · velocidades cadastradas: <span>' + velCountFor(m) + '</span> materiais';
+  }
+}
+
+// Ação centralizada para recalcular tudo sempre que o utilizador muda o filtro
+function processarPainel() {
+  try {
+    const machine = document.getElementById('machineSelect').value;
+    const turnoIni = document.getElementById('turnoInicio').value;
+    const turnoFim = document.getElementById('turnoFim').value;
+    
+    statusMsg('Processando cálculos industriais...');
+    
+    // Defer para permitir que o navegador atualize a mensagem de status antes de travar processando
+    setTimeout(() => {
+      try {
+        const result = machine === 'TODAS' 
+          ? computeAllMachines(producaoData, interrupcoesData, turnoIni, turnoFim)
+          : computeDashboard(producaoData, interrupcoesData, machine, turnoIni, turnoFim);
+          
+        renderAll(result);
+        statusMsg('Painel atualizado em tempo real. (' + result.days.length + ' dias identificados)');
+        
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ machine, turnoIni, turnoFim }));
+        } catch(e) { }
+      } catch (err) {
+        statusMsg('Erro ao processar: ' + err.message, true);
+      }
+    }, 50);
+  } catch (err) {
+    statusMsg('Erro ao iniciar processamento: ' + err.message, true);
+  }
+}
+
+// Escutadores automáticos: quando se muda a dropdown ou a hora, processa na hora!
+document.getElementById('machineSelect').addEventListener('change', () => {
+  updateMachineTag();
+  if (producaoData && interrupcoesData) processarPainel();
+});
+document.getElementById('turnoInicio').addEventListener('change', () => {
+  if (producaoData && interrupcoesData) processarPainel();
+});
+document.getElementById('turnoFim').addEventListener('change', () => {
+  if (producaoData && interrupcoesData) processarPainel();
+});
+
+// Eventos de Tabelas
+document.getElementById('searchInput').addEventListener('input', (e) => renderTable(currentDays, e.target.value.trim()));
+document.getElementById('showAllDays').addEventListener('change', () => renderTable(currentDays, document.getElementById('searchInput').value.trim()));
+document.getElementById('searchInputInterrupcoes').addEventListener('input', (e) => renderDetalhamentoTable(currentDetalhamento, e.target.value.trim()));
+document.getElementById('searchInputMateriais').addEventListener('input', (e) => renderMateriaisTable(currentDays, e.target.value.trim()));
+
+document.querySelectorAll('#dataTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
+    renderTable(currentDays, document.getElementById('searchInput').value.trim());
+  });
+});
+
+document.querySelectorAll('#interrupcoesTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKeyInt === key) sortAscInt = !sortAscInt; else { sortKeyInt = key; sortAscInt = false; }
+    renderDetalhamentoTable(currentDetalhamento, document.getElementById('searchInputInterrupcoes').value.trim());
+  });
+});
+
+/* ---------------------------------------------------------------
+   Leitura Automática das Bases Remotas (Fetch API)
+--------------------------------------------------------------- */
+const URL_PRODUCAO = 'Base_Producao.xlsx'; 
+const URL_INTERRUPCOES = 'Base_Interrupcoes.xlsx';
+
+function restoreFilters() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.turnoIni) document.getElementById('turnoInicio').value = saved.turnoIni;
+    if (saved.turnoFim) document.getElementById('turnoFim').value = saved.turnoFim;
+    if (saved.machine) window._savedMachine = saved.machine; 
+  } catch (e) { }
+}
+
+async function carregarBasesAutomaticamente() {
+  try {
+    statusMsg('A transferir bases de dados remotas...');
+    
+    // cache: 'no-store' força o browser a ir buscar sempre os dados novos, ignorando a memória cache.
+    const resProd = await fetch(URL_PRODUCAO, { cache: 'no-store' });
+    if (!resProd.ok) throw new Error('Ficheiro Base_Producao.xlsx não encontrado.');
+    const arrayBufferProd = await resProd.arrayBuffer();
+    const wbProd = XLSX.read(arrayBufferProd, { type: 'array', cellDates: true });
+    producaoData = parseProducao(wbProd);
+    
+    const resInt = await fetch(URL_INTERRUPCOES, { cache: 'no-store' });
+    if (!resInt.ok) throw new Error('Ficheiro Base_Interrupcoes.xlsx não encontrado.');
+    const arrayBufferInt = await resInt.arrayBuffer();
+    const wbInt = XLSX.read(arrayBufferInt, { type: 'array', cellDates: true });
+    interrupcoesData = parseInterrupcoes(wbInt);
+    
+    statusMsg('Bases lidas com sucesso! Configurando painel...');
+    
+    restoreFilters();
+    refreshMachineOptions();
+    processarPainel();
+    
+  } catch (err) {
+    producaoData = null;
+    interrupcoesData = null;
+    statusMsg('Erro fatal ao carregar bases: ' + err.message, true);
+    document.getElementById('emptyStateTitle').textContent = 'Erro de Ligação';
+    document.getElementById('emptyStateSub').textContent = 'Não foi possível carregar os ficheiros. Erro: ' + err.message;
+  }
+}
+
+// Inicia automaticamente
+window.addEventListener('DOMContentLoaded', carregarBasesAutomaticamente);
+</script>
+</body>
+</html>
