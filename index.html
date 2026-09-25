@@ -566,7 +566,6 @@ const VELOCIDADES_POR_MAQUINA = {
 const ALL_MACHINES = Object.keys(VELOCIDADES_POR_MAQUINA);
 function velTableFor(machine) { return VELOCIDADES_POR_MAQUINA[machine] || {}; }
 function velCountFor(machine) { return Object.keys(velTableFor(machine)).length; }
-document.getElementById('velCount').textContent = velCountFor('TRANSVERSAL 01');
 
 const STORAGE_KEY = 'trProdutividadeDashboard_v2'; // Chave atualizada para o novo sistema
 
