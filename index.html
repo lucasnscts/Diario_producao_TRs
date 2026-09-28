@@ -388,6 +388,12 @@
       <h2 class="section-title">Detalhamento das interrupções</h2>
       <div class="table-controls">
         <input type="text" id="searchInputInterrupcoes" placeholder="Buscar por sintoma ou agente...">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <label for="detalhamentoDayFilter" style="font-size:12px; color:var(--text-secondary);">Dia:</label>
+          <select id="detalhamentoDayFilter" style="font-family:var(--mono); font-size:12px; padding:5px 7px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text-primary); min-width:120px;">
+            <option value="__all__">Todos os dias</option>
+          </select>
+        </div>
       </div>
       <div style="overflow-x:auto;">
         <table id="interrupcoesTable">
@@ -756,6 +762,7 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
   const agentesMinutes = {};
   const agentesByDay = {};
   const detalhamentoMap = {}; 
+  const detalhamentoByDay = {}; // Novo: Agrupamento detalhado por dia
   
   const causesTonByDay = {};
   const agentesTonByDay = {};
@@ -811,22 +818,28 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
         agentesTonTotal[rec.agente] = (agentesTonTotal[rec.agente]||0) + tonsLost;
 
         const detKey = `${rec.causa}|${rec.agente}`;
+        // Armazenamento Global
         if (!detalhamentoMap[detKey]) {
           detalhamentoMap[detKey] = {
-            causa: rec.causa,
-            agente: rec.agente,
-            ocorrencias: 0,
-            tempoAcumulado: 0,
-            maiorTempo: 0,
-            toneladas: 0
+            causa: rec.causa, agente: rec.agente, ocorrencias: 0, tempoAcumulado: 0, maiorTempo: 0, toneladas: 0
           };
         }
         detalhamentoMap[detKey].ocorrencias += 1;
         detalhamentoMap[detKey].tempoAcumulado += mins;
-        if (mins > detalhamentoMap[detKey].maiorTempo) {
-          detalhamentoMap[detKey].maiorTempo = mins;
-        }
+        if (mins > detalhamentoMap[detKey].maiorTempo) detalhamentoMap[detKey].maiorTempo = mins;
         detalhamentoMap[detKey].toneladas += tonsLost;
+
+        // Armazenamento Diário
+        if (!detalhamentoByDay[k]) detalhamentoByDay[k] = {};
+        if (!detalhamentoByDay[k][detKey]) {
+          detalhamentoByDay[k][detKey] = {
+            causa: rec.causa, agente: rec.agente, ocorrencias: 0, tempoAcumulado: 0, maiorTempo: 0, toneladas: 0
+          };
+        }
+        detalhamentoByDay[k][detKey].ocorrencias += 1;
+        detalhamentoByDay[k][detKey].tempoAcumulado += mins;
+        if (mins > detalhamentoByDay[k][detKey].maiorTempo) detalhamentoByDay[k][detKey].maiorTempo = mins;
+        detalhamentoByDay[k][detKey].toneladas += tonsLost;
       }
       cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()+1);
     }
@@ -841,6 +854,13 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
       d.tempoMedio = d.tempoAcumulado / d.ocorrencias;
       return d;
     });
+
+  const detalhamentoByDayFiltered = {};
+  Object.keys(detalhamentoByDay).forEach(day => {
+    detalhamentoByDayFiltered[day] = Object.values(detalhamentoByDay[day])
+      .filter(d => !excluidosCausaDet.includes(d.causa.trim().toUpperCase()) && !excluidosAgenteDet.includes(d.agente.trim().toUpperCase()))
+      .map(d => { d.tempoMedio = d.tempoAcumulado / d.ocorrencias; return d; });
+  });
 
   const allKeys = new Set([...Object.keys(byDay), ...Object.keys(stoppedByDay)]);
   const days = [];
@@ -937,7 +957,10 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
     warnings.push(`${pct}% do peso produzido corresponde a materiais sem velocidade técnica cadastrada para ${machine}.`);
   }
 
-  return { days, causes: causesArr, causesByDay, causesTonByDay, agentes: agentesArr, agentesByDay, agentesTonByDay, warnings, turnoMin, detalhamentoInterrupcoes };
+  return { 
+    days, causes: causesArr, causesByDay, causesTonByDay, agentes: agentesArr, agentesByDay, agentesTonByDay, 
+    warnings, turnoMin, detalhamentoInterrupcoes, detalhamentoByDay: detalhamentoByDayFiltered 
+  };
 }
 
 /* ---------------------------------------------------------------
@@ -946,6 +969,7 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
 function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
   let mergedDaysMap = {};
   let mergedDetalhamentoMap = {};
+  let mergedDetalhamentoByDay = {}; // Novo
   let mergedCausesByDay = {};
   let mergedAgentesByDay = {};
   let mergedCausesTonByDay = {};
@@ -1005,6 +1029,20 @@ function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
       mergedDetalhamentoMap[k].maiorTempo = Math.max(mergedDetalhamentoMap[k].maiorTempo, det.maiorTempo);
       mergedDetalhamentoMap[k].toneladas += det.toneladas;
     });
+
+    Object.keys(res.detalhamentoByDay).forEach(day => {
+      if (!mergedDetalhamentoByDay[day]) mergedDetalhamentoByDay[day] = {};
+      res.detalhamentoByDay[day].forEach(det => {
+        const k = `${det.causa}|${det.agente}`;
+        if (!mergedDetalhamentoByDay[day][k]) {
+          mergedDetalhamentoByDay[day][k] = {...det, ocorrencias:0, tempoAcumulado:0, maiorTempo:0, toneladas:0};
+        }
+        mergedDetalhamentoByDay[day][k].ocorrencias += det.ocorrencias;
+        mergedDetalhamentoByDay[day][k].tempoAcumulado += det.tempoAcumulado;
+        mergedDetalhamentoByDay[day][k].maiorTempo = Math.max(mergedDetalhamentoByDay[day][k].maiorTempo, det.maiorTempo);
+        mergedDetalhamentoByDay[day][k].toneladas += det.toneladas;
+      });
+    });
     
     const mergeDicts = (source, target) => {
       Object.keys(source).forEach(day => {
@@ -1051,6 +1089,14 @@ function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
     d.tempoMedio = d.tempoAcumulado / d.ocorrencias;
     return d;
   });
+
+  const finalDetByDay = {};
+  Object.keys(mergedDetalhamentoByDay).forEach(day => {
+    finalDetByDay[day] = Object.values(mergedDetalhamentoByDay[day]).map(d => {
+      d.tempoMedio = d.tempoAcumulado / d.ocorrencias;
+      return d;
+    });
+  });
   
   return {
     days, 
@@ -1062,7 +1108,8 @@ function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
     agentesTonByDay: mergedAgentesTonByDay,
     warnings: Array.from(allWarnings), 
     turnoMin: turnoMinTotal, 
-    detalhamentoInterrupcoes
+    detalhamentoInterrupcoes,
+    detalhamentoByDay: finalDetByDay
   };
 }
 
@@ -1072,6 +1119,7 @@ function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
 let dailyChartInst = null, causesChartInst = null, agentesChartInst = null;
 let currentDays = [];
 let currentDetalhamento = [];
+let currentDetalhamentoByDay = {};
 let currentCausesByDay = {};
 let currentAgentesByDay = {};
 let currentCausesTonByDay = {};
@@ -1162,8 +1210,16 @@ function renderTable(days, filterText) {
   `).join('');
 }
 
-function renderDetalhamentoTable(detalhamento, filterText) {
-  let rows = detalhamento;
+function renderDetalhamentoTable(filterText) {
+  const dayVal = document.getElementById('detalhamentoDayFilter').value;
+  let rows = [];
+  
+  if (dayVal === '__all__') {
+    rows = currentDetalhamento;
+  } else {
+    rows = currentDetalhamentoByDay[dayVal] || [];
+  }
+
   if (filterText) {
     const ft = filterText.toLowerCase();
     rows = rows.filter(d => d.causa.toLowerCase().includes(ft) || d.agente.toLowerCase().includes(ft));
@@ -1285,6 +1341,12 @@ function renderDailyChart(days) {
               causesSelect.dispatchEvent(new Event('change'));
             }
 
+            const detSelect = document.getElementById('detalhamentoDayFilter');
+            if(detSelect.querySelector(`option[value="${dayKey}"]`)) {
+              detSelect.value = dayKey;
+              detSelect.dispatchEvent(new Event('change'));
+            }
+
             const searchInput = document.getElementById('searchInput');
             searchInput.value = dateStr;
             searchInput.dispatchEvent(new Event('input'));
@@ -1362,6 +1424,7 @@ function renderAll(result) {
   document.getElementById('clearFilterWrap').style.display = 'none'; 
   currentDays = result.days;
   currentDetalhamento = result.detalhamentoInterrupcoes || [];
+  currentDetalhamentoByDay = result.detalhamentoByDay || {};
   currentTurnoMin = result.turnoMin;
   currentCausesByDay = result.causesByDay || {};
   currentAgentesByDay = result.agentesByDay || {};
@@ -1374,7 +1437,10 @@ function renderAll(result) {
   renderKPIs(result.days, document.getElementById('kpiDayFilter').value); 
 
   renderTable(result.days, document.getElementById('searchInput').value.trim());
-  renderDetalhamentoTable(currentDetalhamento, document.getElementById('searchInputInterrupcoes').value.trim());
+  
+  populateDetalhamentoDayFilter(result.days);
+  renderDetalhamentoTable(document.getElementById('searchInputInterrupcoes').value.trim());
+  
   renderMateriaisTable(result.days, document.getElementById('searchInputMateriais').value.trim());
   
   renderDailyChart(result.days);
@@ -1444,12 +1510,31 @@ document.getElementById('causesDayFilter').addEventListener('change', (e) => {
   }
 });
 
+function populateDetalhamentoDayFilter(days) {
+  const sel = document.getElementById('detalhamentoDayFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="__all__">Todos os dias</option>';
+  days.filter(d => currentDetalhamentoByDay[d.dayKey]).forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.dayKey; opt.textContent = d.dateDisplay; sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else sel.value = '__all__';
+}
+
+document.getElementById('detalhamentoDayFilter').addEventListener('change', () => {
+  renderDetalhamentoTable(document.getElementById('searchInputInterrupcoes').value.trim());
+});
+
 document.getElementById('btnClearChartFilter').addEventListener('click', () => {
   const kpiSelect = document.getElementById('kpiDayFilter');
   kpiSelect.value = '__all__'; kpiSelect.dispatchEvent(new Event('change'));
 
   const causesSelect = document.getElementById('causesDayFilter');
   causesSelect.value = '__all__'; causesSelect.dispatchEvent(new Event('change'));
+
+  const detSelect = document.getElementById('detalhamentoDayFilter');
+  detSelect.value = '__all__'; detSelect.dispatchEvent(new Event('change'));
 
   const searchInput = document.getElementById('searchInput');
   searchInput.value = ''; searchInput.dispatchEvent(new Event('input'));
@@ -1547,7 +1632,7 @@ document.getElementById('turnoFim').addEventListener('change', () => {
 
 document.getElementById('searchInput').addEventListener('input', (e) => renderTable(currentDays, e.target.value.trim()));
 document.getElementById('showAllDays').addEventListener('change', () => renderTable(currentDays, document.getElementById('searchInput').value.trim()));
-document.getElementById('searchInputInterrupcoes').addEventListener('input', (e) => renderDetalhamentoTable(currentDetalhamento, e.target.value.trim()));
+document.getElementById('searchInputInterrupcoes').addEventListener('input', (e) => renderDetalhamentoTable(e.target.value.trim()));
 document.getElementById('searchInputMateriais').addEventListener('input', (e) => renderMateriaisTable(currentDays, e.target.value.trim()));
 
 document.querySelectorAll('#dataTable thead th').forEach(th => {
@@ -1562,7 +1647,7 @@ document.querySelectorAll('#interrupcoesTable thead th').forEach(th => {
   th.addEventListener('click', () => {
     const key = th.dataset.key;
     if (sortKeyInt === key) sortAscInt = !sortAscInt; else { sortKeyInt = key; sortAscInt = false; }
-    renderDetalhamentoTable(currentDetalhamento, document.getElementById('searchInputInterrupcoes').value.trim());
+    renderDetalhamentoTable(document.getElementById('searchInputInterrupcoes').value.trim());
   });
 });
 
