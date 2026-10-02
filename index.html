@@ -442,7 +442,7 @@
   </section>
 
   <footer class="note">
-    As velocidades técnicas por material estão fixas neste painel, uma tabela por máquina (TRANSVERSAL 01 a 05, 608 especificações ao todo). O cálculo de "esperado", "perdido" e "capacidade" usa, para cada dia, a média das velocidades dos materiais produzidos naquele dia na máquina selecionada, ponderada pelo peso real de cada um — dias com materiais fora da tabela de velocidades têm cobertura parcial, sinalizada na tabela. Dias sem nenhum minuto produtivo no turno são ocultados por padrão.
+    As velocidades técnicas por material estão fixas neste painel. O cálculo de "esperado", "perdido" e "capacidade" usa, para cada dia, a média das velocidades dos materiais produzidos naquele dia na máquina selecionada, ponderada pelo peso real de cada um — dias com materiais fora da tabela de velocidades têm cobertura parcial, sinalizada na tabela. Dias sem nenhum minuto produtivo no turno são ocultados por padrão.
   </footer>
 
 </div>
@@ -489,7 +489,8 @@ const VELOCIDADES_POR_MAQUINA = {
     "219463":16.564, "219464":16.672, "219693":17.289, "222155":17.563, "224499":16.978, "224010":21.076,
     "219469":16.551, "219470":16.637, "223108":20.02, "219471":16.728, "219677":20.112, "219472":16.907,
     "219473":16.925, "219474":16.969, "213102":20.516, "201097":20.56, "220509":17.33, "215442":20.854,
-    "220511":17.389, "209635":20.915, "219754":17.86, "222156":21.778, "219287":37.234
+    "220511":17.389, "209635":20.915, "219754":17.86, "222156":21.778, "219287":37.234,
+    "219628": 8.237, "219630": 10.872, "212393": 5.62, "224294": 14.103, "223133": 13.166
   },
   "TRANSVERSAL 02": {
     "201299":35.653, "201208":29.711, "201296":26.881, "214638":26.881, "201191":22.401, "208885":16.978,
@@ -533,7 +534,7 @@ const VELOCIDADES_POR_MAQUINA = {
     "222230":2.526, "222573":3.858, "222117":2.552, "222268":3.551, "200718":7.615, "222336":8.195,
     "219835":10.356, "200739":10.02, "224499":12.94, "219469":12.691, "219470":12.741, "219471":12.795,
     "219472":12.899, "219473":12.91, "219474":12.935, "219627":6.163, "219629":8.134, "219630":8.219,
-    "219632":10.476
+    "219632":10.476, "222338": 10.784
   },
   "TRANSVERSAL 05": {
     "200792":22.924, "200800":19.103, "200779":18.222, "201104":17.634, "200769":15.185, "200760":14.695,
@@ -566,7 +567,8 @@ const VELOCIDADES_POR_MAQUINA = {
     "224499":9.021, "224500":10.825, "224010":13.415, "224721":11.72, "219469":7.849, "219470":8.064,
     "223108":9.821, "219471":8.303, "219677":10.068, "219472":8.808, "219473":8.862, "219474":8.995,
     "209634":11.71, "219754":10.386, "224502":11.427, "224503":13.712, "224504":16.993, "219694":15.714,
-    "219465":18.719, "201108":12.028, "201109":14.434, "201131":17.887, "208892":23.512
+    "219465":18.719, "201108":12.028, "201109":14.434, "201131":17.887, "208892":23.512,
+    "212980": 19.809, "222339": 9.021, "222809": 11.186, "222810": 14.073, "210808": 8.502
   }
 };
 const ALL_MACHINES = Object.keys(VELOCIDADES_POR_MAQUINA);
@@ -762,7 +764,7 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
   const agentesMinutes = {};
   const agentesByDay = {};
   const detalhamentoMap = {}; 
-  const detalhamentoByDay = {}; // Novo: Agrupamento detalhado por dia
+  const detalhamentoByDay = {}; 
   
   const causesTonByDay = {};
   const agentesTonByDay = {};
@@ -969,7 +971,7 @@ function computeDashboard(prod, interr, machine, turnoIniStr, turnoFimStr) {
 function computeAllMachines(prod, interr, turnoIniStr, turnoFimStr) {
   let mergedDaysMap = {};
   let mergedDetalhamentoMap = {};
-  let mergedDetalhamentoByDay = {}; // Novo
+  let mergedDetalhamentoByDay = {};
   let mergedCausesByDay = {};
   let mergedAgentesByDay = {};
   let mergedCausesTonByDay = {};
