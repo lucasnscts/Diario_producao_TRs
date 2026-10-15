@@ -304,7 +304,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 12px 0; padding-bottom:8px; border-bottom:2px solid var(--accent); gap:10px; flex-wrap:wrap;">
         <h2 class="section-title" style="margin:0; padding:0; border:none;">Indicadores do período carregado</h2>
         <div style="display:flex; align-items:center; gap:6px;">
-          <label for="kpiDayFilter" style="font-size:12px; color:var(--text-secondary);">Dia (KPIs):</label>
+          <label for="kpiDayFilter" style="font-size:12px; color:var(--text-secondary); font-weight: 600;">Filtro por dia (Global):</label>
           <select id="kpiDayFilter" style="font-family:var(--mono); font-size:12px; padding:5px 7px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text-primary); min-width: 120px;">
             <option value="__all__">Todos os dias do período</option>
           </select>
@@ -1328,36 +1328,12 @@ function renderDailyChart(days) {
           const dataIndex = elements[0].index;
           const clickedDay = shown[dataIndex];
           if (clickedDay) {
-            const dayKey = clickedDay.dayKey;
-            const dateStr = clickedDay.dateDisplay;
-            
+            // Agora o gráfico apenas diz ao filtro global para trabalhar por ele
             const kpiSelect = document.getElementById('kpiDayFilter');
-            if(kpiSelect.querySelector(`option[value="${dayKey}"]`)) {
-              kpiSelect.value = dayKey;
+            if(kpiSelect.querySelector(`option[value="${clickedDay.dayKey}"]`)) {
+              kpiSelect.value = clickedDay.dayKey;
               kpiSelect.dispatchEvent(new Event('change'));
             }
-
-            const causesSelect = document.getElementById('causesDayFilter');
-            if(causesSelect.querySelector(`option[value="${dayKey}"]`)) {
-              causesSelect.value = dayKey;
-              causesSelect.dispatchEvent(new Event('change'));
-            }
-
-            const detSelect = document.getElementById('detalhamentoDayFilter');
-            if(detSelect.querySelector(`option[value="${dayKey}"]`)) {
-              detSelect.value = dayKey;
-              detSelect.dispatchEvent(new Event('change'));
-            }
-
-            const searchInput = document.getElementById('searchInput');
-            searchInput.value = dateStr;
-            searchInput.dispatchEvent(new Event('input'));
-
-            const searchMateriais = document.getElementById('searchInputMateriais');
-            searchMateriais.value = dateStr;
-            searchMateriais.dispatchEvent(new Event('input'));
-            
-            document.getElementById('clearFilterWrap').style.display = 'block';
           }
         }
       },
@@ -1436,19 +1412,15 @@ function renderAll(result) {
   renderWarnings(result.warnings);
   
   populateKpiDayFilter(result.days); 
-  renderKPIs(result.days, document.getElementById('kpiDayFilter').value); 
-
-  renderTable(result.days, document.getElementById('searchInput').value.trim());
-  
-  populateDetalhamentoDayFilter(result.days);
-  renderDetalhamentoTable(document.getElementById('searchInputInterrupcoes').value.trim());
-  
-  renderMateriaisTable(result.days, document.getElementById('searchInputMateriais').value.trim());
-  
-  renderDailyChart(result.days);
   populateCausesDayFilter(result.days);
-  renderCausesChart(result.causes);
-  renderAgentesChart(result.agentes);
+  populateDetalhamentoDayFilter(result.days);
+  
+  // Renderiza gráficos base que não dependem do evento de clique para nascer
+  renderDailyChart(result.days);
+
+  // Sincroniza automaticamente a página inteira com base no filtro Global retido na memória (ou "__all__")
+  document.getElementById('kpiDayFilter').dispatchEvent(new Event('change'));
+  
   document.getElementById('resultsSection').style.display = '';
   document.getElementById('emptyState').style.display = 'none';
 }
@@ -1470,8 +1442,64 @@ function populateKpiDayFilter(days) {
   else sel.value = '__all__';
 }
 
+// O novo Filtro Global: Ao mudar este dropdown, altera toda a página
 document.getElementById('kpiDayFilter').addEventListener('change', (e) => {
-  renderKPIs(currentDays, e.target.value);
+  const val = e.target.value;
+  
+  // 1. Atualiza os KPIs
+  renderKPIs(currentDays, val);
+  
+  if (val === '__all__') {
+    // Restaurar Gráficos de Causas
+    const causesSelect = document.getElementById('causesDayFilter');
+    causesSelect.value = '__all__'; 
+    causesSelect.dispatchEvent(new Event('change'));
+
+    // Restaurar Tabela de Detalhamentos
+    const detSelect = document.getElementById('detalhamentoDayFilter');
+    detSelect.value = '__all__'; 
+    detSelect.dispatchEvent(new Event('change'));
+
+    // Restaurar Tabelas Inferiores
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = ''; 
+    searchInput.dispatchEvent(new Event('input'));
+
+    const searchMateriais = document.getElementById('searchInputMateriais');
+    searchMateriais.value = ''; 
+    searchMateriais.dispatchEvent(new Event('input'));
+
+    document.getElementById('clearFilterWrap').style.display = 'none';
+  } else {
+    // Buscar a string de data formatada para colocar na barra de pesquisa
+    const selectedDay = currentDays.find(d => d.dayKey === val);
+    const dateStr = selectedDay ? selectedDay.dateDisplay : '';
+
+    // Filtrar Gráficos de Causas
+    const causesSelect = document.getElementById('causesDayFilter');
+    if(causesSelect.querySelector(`option[value="${val}"]`)) {
+      causesSelect.value = val;
+      causesSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Filtrar Tabela de Detalhamentos
+    const detSelect = document.getElementById('detalhamentoDayFilter');
+    if(detSelect.querySelector(`option[value="${val}"]`)) {
+      detSelect.value = val;
+      detSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Filtrar Tabelas Inferiores
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = dateStr;
+    searchInput.dispatchEvent(new Event('input'));
+
+    const searchMateriais = document.getElementById('searchInputMateriais');
+    searchMateriais.value = dateStr;
+    searchMateriais.dispatchEvent(new Event('input'));
+
+    document.getElementById('clearFilterWrap').style.display = 'block';
+  }
 });
 
 function populateCausesDayFilter(days) {
@@ -1529,22 +1557,10 @@ document.getElementById('detalhamentoDayFilter').addEventListener('change', () =
 });
 
 document.getElementById('btnClearChartFilter').addEventListener('click', () => {
+  // Apenas mandar o filtro Global voltar para "__all__", ele limpa o resto!
   const kpiSelect = document.getElementById('kpiDayFilter');
-  kpiSelect.value = '__all__'; kpiSelect.dispatchEvent(new Event('change'));
-
-  const causesSelect = document.getElementById('causesDayFilter');
-  causesSelect.value = '__all__'; causesSelect.dispatchEvent(new Event('change'));
-
-  const detSelect = document.getElementById('detalhamentoDayFilter');
-  detSelect.value = '__all__'; detSelect.dispatchEvent(new Event('change'));
-
-  const searchInput = document.getElementById('searchInput');
-  searchInput.value = ''; searchInput.dispatchEvent(new Event('input'));
-
-  const searchMateriais = document.getElementById('searchInputMateriais');
-  searchMateriais.value = ''; searchMateriais.dispatchEvent(new Event('input'));
-
-  document.getElementById('clearFilterWrap').style.display = 'none';
+  kpiSelect.value = '__all__'; 
+  kpiSelect.dispatchEvent(new Event('change'));
 });
 
 /* ---------------------------------------------------------------
